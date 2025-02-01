@@ -1,0 +1,10 @@
+package ad.t4_1.interfaces;
+
+/**
+ * Interfaz que obliga a que todos
+ * los objetos tengan un identificador numérico.
+ */
+public interface Entity {
+    public int getId();
+    public void setId(int id);
+}
