@@ -3,8 +3,6 @@ package ad.t4_1.models;
  * @author Manuel Ripalda Delgado
  */
 import java.time.LocalDate;
-
-import ad.t4_1.interfaces.Entity;
 /**
  * Modela un pedido
  */

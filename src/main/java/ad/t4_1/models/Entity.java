@@ -1,4 +1,4 @@
-package ad.t4_1.interfaces;
+package ad.t4_1.models;
 
 /**
  * Interfaz que obliga a que todos
