@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 /**
  * Clase para configurar las propiedades de la base de datos. Usa métodos de SqlUtils
  */
-public class SQLiteDbConfig {
+public class SQLiteConfig {
     private String jdbcUrl;
     private String driverClass;
     private int minPoolSize;
@@ -30,7 +30,7 @@ public class SQLiteDbConfig {
     
     public static final int CONNECTION_TIMEOUT = 30000; // 30 segundos
 
-    public SQLiteDbConfig(String dbPath, Optional<String> initScriptPath) {
+    public SQLiteConfig(String dbPath, Optional<String> initScriptPath) {
         this.dbName = dbPath;
         this.initScript = initScriptPath.orElse("null.sql");
         this.jdbcUrl = "jdbc:sqlite:" + dbPath;
