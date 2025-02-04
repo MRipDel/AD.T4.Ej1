@@ -6,13 +6,34 @@ import java.util.Scanner;
 import ad.t4_1.dao.*;
 import ad.t4_1.models.*;
 
-public class Console implements UserInterface{
+/**
+ * Implementación de la interfaz de usuario en modo consola.
+ * Proporciona un menú interactivo para gestionar clientes, pedidos y zonas de envío
+ * a través de la línea de comandos.
+ */
+public class Console implements UserInterface {
+    /** Scanner para la lectura de entrada del usuario */
     private final Scanner scanner;
+    
+    /** DAO para operaciones con clientes */
     private final ClienteDAO clienteDAO;
+    
+    /** DAO para operaciones con pedidos */
     private final PedidoDAO pedidoDAO;
+    
+    /** DAO para operaciones con zonas de envío */
     private final ZonaEnvioDAO zonaDAO;
+    
+    /** Formateador de fechas para entrada/salida */
     private final DateTimeFormatter dateFormatter;
+    
+    /** Indica si se debe salir del programa */
     private boolean exit;
+
+    /**
+     * Constructor que inicializa los componentes necesarios para la interfaz.
+     * Configura el scanner, los DAOs y el formateador de fechas.
+     */
     public Console() {
         this.scanner = new Scanner(System.in);
         this.clienteDAO = new ClienteDAO();
@@ -21,7 +42,9 @@ public class Console implements UserInterface{
         this.dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     }
 
-
+    /**
+     * Muestra el menú principal y sus opciones.
+     */
     private void mostrarMenuPrincipal() {
         System.out.println("\n=== GESTIÓN DE PEDIDOS ===");
         System.out.println("1. Gestión de Clientes");
@@ -32,6 +55,9 @@ public class Console implements UserInterface{
         System.out.print("Seleccione una opción: ");
     }
 
+    /**
+     * Gestiona el submenú de clientes y sus operaciones.
+     */
     private void gestionClientes() {
         boolean exit = false;
         while (!exit) {
@@ -48,12 +74,15 @@ public class Console implements UserInterface{
                 case 2 -> agregarCliente();
                 case 3 -> modificarCliente();
                 case 4 -> eliminarCliente();
-                case 0 -> exit=!exit;
+                case 0 -> exit = true;
                 default -> System.out.println("Opción no válida");
             }
         }
     }
 
+    /**
+     * Gestiona el submenú de pedidos y sus operaciones.
+     */
     private void gestionPedidos() {
         while (true) {
             System.out.println("\n=== GESTIÓN DE PEDIDOS ===");
@@ -75,6 +104,9 @@ public class Console implements UserInterface{
         }
     }
 
+    /**
+     * Muestra la lista de todos los clientes registrados.
+     */
     private void mostrarClientes() {
         System.out.println("\n=== LISTADO DE CLIENTES ===");
         clienteDAO.get().forEach(cliente -> 
@@ -87,6 +119,10 @@ public class Console implements UserInterface{
         );
     }
 
+    /**
+     * Gestiona el proceso de agregar un nuevo cliente.
+     * Solicita los datos necesarios al usuario y los valida.
+     */
     private void agregarCliente() {
         System.out.println("\n=== AÑADIR CLIENTE ===");
         System.out.print("Nombre: ");
@@ -96,7 +132,6 @@ public class Console implements UserInterface{
         System.out.print("Teléfono: ");
         String telefono = scanner.nextLine();
         
-        // Mostrar zonas disponibles
         System.out.println("\nZonas de envío disponibles:");
         zonaDAO.get().forEach(zona -> 
             System.out.printf("%d - %s (Tarifa: %.2f€)%n", 
@@ -118,6 +153,10 @@ public class Console implements UserInterface{
         System.out.println("Cliente añadido con éxito.");
     }
 
+    /**
+     * Gestiona el proceso de modificación de un cliente existente.
+     * Permite modificar campos individuales manteniendo los demás sin cambios.
+     */
     private void modificarCliente() {
         System.out.println("\n=== MODIFICAR CLIENTE ===");
         System.out.print("ID del cliente a modificar: ");
@@ -146,6 +185,9 @@ public class Console implements UserInterface{
         System.out.println("Cliente modificado con éxito.");
     }
 
+    /**
+     * Gestiona el proceso de eliminación de un cliente.
+     */
     private void eliminarCliente() {
         System.out.println("\n=== ELIMINAR CLIENTE ===");
         System.out.print("ID del cliente a eliminar: ");
@@ -158,6 +200,9 @@ public class Console implements UserInterface{
         }
     }
 
+    /**
+     * Muestra la lista de todos los pedidos registrados.
+     */
     private void mostrarPedidos() {
         System.out.println("\n=== LISTADO DE PEDIDOS ===");
         pedidoDAO.get().forEach(pedido -> 
@@ -169,6 +214,10 @@ public class Console implements UserInterface{
         );
     }
 
+    /**
+     * Gestiona el proceso de agregar un nuevo pedido.
+     * Valida la existencia del cliente antes de crear el pedido.
+     */
     private void agregarPedido() {
         System.out.println("\n=== AÑADIR PEDIDO ===");
         System.out.print("ID del cliente: ");
@@ -191,6 +240,9 @@ public class Console implements UserInterface{
         System.out.println("Pedido añadido con éxito.");
     }
 
+    /**
+     * Gestiona el proceso de modificación de un pedido existente.
+     */
     private void modificarPedido() {
         System.out.println("\n=== MODIFICAR PEDIDO ===");
         System.out.print("ID del pedido a modificar: ");
@@ -203,7 +255,6 @@ public class Console implements UserInterface{
         }
 
         Pedido pedido = pedidoOpt.get();
-
         System.out.printf("Importe actual: %.2f€%nNuevo importe (Enter para mantener): ", 
             pedido.getImporteTotal());
         String importeStr = scanner.nextLine();
@@ -215,6 +266,9 @@ public class Console implements UserInterface{
         System.out.println("Pedido modificado con éxito.");
     }
 
+    /**
+     * Gestiona el proceso de eliminación de un pedido.
+     */
     private void eliminarPedido() {
         System.out.println("\n=== ELIMINAR PEDIDO ===");
         System.out.print("ID del pedido a eliminar: ");
@@ -227,18 +281,24 @@ public class Console implements UserInterface{
         }
     }
 
+    /**
+     * Muestra información sobre las zonas de envío y el número de clientes en cada zona.
+     */
     private void consultarZonasEnvio() {
         System.out.println("\n=== ZONAS DE ENVÍO ===");
         System.out.println("Listado de zonas con número de clientes:");
         zonaDAO.getZonasConNumeroClientes().forEach(zona -> 
-            System.out.printf("ID: %d, Nombre: %s, Tarifa: %.2f€, Clientes: %d%n",
-                zona.getId(), // id_zona
-                zona.getNombre(), // nombre_zona
-                zona.getTarifa() // tarifa_envio
+            System.out.printf("ID: %d, Nombre: %s, Tarifa: %.2f€%n",
+                zona.getId(),
+                zona.getNombre(),
+                zona.getTarifa()
             )
         );
     }
 
+    /**
+     * Muestra los pedidos y el total gastado por un cliente específico.
+     */
     private void consultarPedidosCliente() {
         System.out.println("\n=== CONSULTAR PEDIDOS DE CLIENTE ===");
         System.out.print("ID del cliente: ");
@@ -264,6 +324,10 @@ public class Console implements UserInterface{
         System.out.printf("%nTotal gastado por el cliente: %.2f€%n", totalGastado);
     }
 
+    /**
+     * Lee y parsea una opción numérica del usuario.
+     * @return el número introducido o -1 si no es válido
+     */
     private int leerOpcion() {
         try {
             return Integer.parseInt(scanner.nextLine());
@@ -272,6 +336,9 @@ public class Console implements UserInterface{
         }
     }
 
+    /**
+     * Inicia la interfaz de usuario y ejecuta el bucle principal del programa.
+     */
     @Override
     public void start() {
         exit = false;
@@ -290,9 +357,12 @@ public class Console implements UserInterface{
         }
     }
 
+    /**
+     * Detiene la ejecución del programa y libera recursos.
+     */
     @Override
     public void stop() {
-        exit=!exit;
+        exit = true;
         if (scanner != null) {
             scanner.close();
         }
