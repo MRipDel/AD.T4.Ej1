@@ -14,13 +14,31 @@ import javax.sql.DataSource;
 import ad.t4_1.models.Pedido;
 import ad.t4_1.db.SQLiteConnectionPool;
 
+/**
+ * Implementación del acceso a datos para la entidad Pedido.
+ * Proporciona métodos para realizar operaciones CRUD básicas sobre la tabla Pedidos,
+ * así como consultas específicas relacionadas con la gestión de pedidos por cliente
+ * y cálculos de importes totales.
+ */
 public class PedidoDAO implements Crud<Pedido> {
+    
+    /** Fuente de datos para la conexión a la base de datos */
     private final DataSource dataSource;
 
+    /**
+     * Constructor por defecto.
+     * Inicializa la fuente de datos obteniendo una instancia del pool de conexiones.
+     */
     public PedidoDAO() {
         this.dataSource = SQLiteConnectionPool.getInstance().getDataSource();
     }
 
+    /**
+     * Convierte un registro de la base de datos en un objeto Pedido.
+     * @param rs ResultSet con los datos del pedido
+     * @return Objeto Pedido con los datos del registro
+     * @throws SQLException si ocurre un error al acceder a los datos
+     */
     private static Pedido resultToPedido(ResultSet rs) throws SQLException {
         return new Pedido(
             rs.getInt("id_pedido"),
@@ -30,6 +48,11 @@ public class PedidoDAO implements Crud<Pedido> {
         );
     }
 
+    /**
+     * Recupera todos los pedidos almacenados en la base de datos.
+     * @return Stream de objetos Pedido
+     * @throws RuntimeException si ocurre un error en el acceso a la base de datos
+     */
     @Override
     public Stream<Pedido> get() {
         final String sql = "SELECT * FROM Pedidos";
@@ -59,6 +82,12 @@ public class PedidoDAO implements Crud<Pedido> {
         }
     }
 
+    /**
+     * Recupera un pedido específico por su identificador.
+     * @param id Identificador del pedido a buscar
+     * @return Optional con el pedido si existe, Optional vacío si no
+     * @throws RuntimeException si ocurre un error en el acceso a la base de datos
+     */
     @Override
     public Optional<Pedido> get(int id) {
         final String sql = "SELECT * FROM Pedidos WHERE id_pedido = ?";
@@ -75,6 +104,11 @@ public class PedidoDAO implements Crud<Pedido> {
         }
     }
 
+    /**
+     * Inserta un nuevo pedido en la base de datos.
+     * @param pedido Pedido a insertar
+     * @throws RuntimeException si ocurre un error en el acceso a la base de datos
+     */
     @Override
     public void insert(Pedido pedido) {
         final String sql = "INSERT INTO Pedidos (fecha, importe_total, id_cliente) VALUES (?, ?, ?)";
@@ -88,7 +122,6 @@ public class PedidoDAO implements Crud<Pedido> {
             
             pstmt.executeUpdate();
             
-            // Obtener el ID generado
             ResultSet rs = pstmt.getGeneratedKeys();
             if (rs.next()) {
                 pedido.setId(rs.getInt(1));
@@ -98,6 +131,12 @@ public class PedidoDAO implements Crud<Pedido> {
         }
     }
 
+    /**
+     * Elimina un pedido de la base de datos.
+     * @param id Identificador del pedido a eliminar
+     * @return true si se eliminó el pedido, false si no existía
+     * @throws RuntimeException si ocurre un error en el acceso a la base de datos
+     */
     @Override
     public boolean delete(int id) {
         final String sql = "DELETE FROM Pedidos WHERE id_pedido = ?";
@@ -112,6 +151,12 @@ public class PedidoDAO implements Crud<Pedido> {
         }
     }
 
+    /**
+     * Actualiza los datos de un pedido existente.
+     * @param pedido Pedido con los datos actualizados
+     * @return true si se actualizó el pedido, false si no existía
+     * @throws RuntimeException si ocurre un error en el acceso a la base de datos
+     */
     @Override
     public boolean update(Pedido pedido) {
         final String sql = "UPDATE Pedidos SET fecha = ?, importe_total = ?, id_cliente = ? WHERE id_pedido = ?";
@@ -130,6 +175,13 @@ public class PedidoDAO implements Crud<Pedido> {
         }
     }
 
+    /**
+     * Actualiza el identificador de un pedido.
+     * @param oldId Identificador actual del pedido
+     * @param newId Nuevo identificador para el pedido
+     * @return true si se actualizó el identificador, false si no existía el pedido
+     * @throws RuntimeException si ocurre un error en el acceso a la base de datos
+     */
     @Override
     public boolean update(int oldId, int newId) {
         final String sql = "UPDATE Pedidos SET id_pedido = ? WHERE id_pedido = ?";
@@ -146,12 +198,12 @@ public class PedidoDAO implements Crud<Pedido> {
         }
     }
 
-    // Métodos específicos para Pedidos
-
     /**
-     * Obtiene todos los pedidos de un cliente específico
-     * @param idCliente ID del cliente
+     * Recupera todos los pedidos de un cliente específico.
+     * Los pedidos se ordenan por fecha en orden descendente.
+     * @param idCliente Identificador del cliente
      * @return Stream de pedidos del cliente
+     * @throws RuntimeException si ocurre un error en el acceso a la base de datos
      */
     public Stream<Pedido> getPedidosPorCliente(int idCliente) {
         final String sql = "SELECT * FROM Pedidos WHERE id_cliente = ? ORDER BY fecha DESC";
@@ -184,9 +236,10 @@ public class PedidoDAO implements Crud<Pedido> {
     }
 
     /**
-     * Calcula el total gastado por un cliente específico
-     * @param idCliente ID del cliente
+     * Calcula el importe total de todos los pedidos de un cliente.
+     * @param idCliente Identificador del cliente
      * @return Total gastado por el cliente
+     * @throws RuntimeException si ocurre un error en el acceso a la base de datos
      */
     public double getTotalGastadoPorCliente(int idCliente) {
         final String sql = "SELECT SUM(importe_total) as total FROM Pedidos WHERE id_cliente = ?";
