@@ -1,3 +1,5 @@
-.vscode
+.vscode/settings.json
 /src/test
-target/
+target
+/docs/*
+!docs/apidocs
