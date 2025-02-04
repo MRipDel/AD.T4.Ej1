@@ -32,7 +32,7 @@ public class SQLiteConfig {
 
     public SQLiteConfig(String dbPath, Optional<String> initScriptPath) {
         this.dbName = dbPath;
-        this.initScript = initScriptPath.orElse("null.sql");
+        this.initScript = initScriptPath.orElse(null);
         this.jdbcUrl = "jdbc:sqlite:" + dbPath;
         this.driverClass = "org.sqlite.JDBC";
         this.minPoolSize = 5;

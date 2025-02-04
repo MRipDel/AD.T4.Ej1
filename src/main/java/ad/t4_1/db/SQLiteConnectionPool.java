@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.sql.DataSource;
 
 /**
  * Pool de conexiones implementado como un Singleton.
@@ -28,7 +29,7 @@ public class SQLiteConnectionPool {
     }
 
     /**
-     * Constructor privado que inicializa el pool de conexiones con script personalizado.
+     * Constructor privado que inicializa el pool de conexiones.
      * @param dbPath Ruta a la base de datos
      * @param initScript Script SQL de inicialización
      */
@@ -120,8 +121,13 @@ public class SQLiteConnectionPool {
     }
 
     /**
-     * Cierra el pool de conexiones y libera los recursos.
+     * 
+     * @return
      */
+    public DataSource getDataSource() {
+        return this.dataSource;
+    }
+
     public void closePool() {
         if (dataSource != null && !dataSource.isClosed()) {
             try {
