@@ -18,18 +18,37 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Clase para configurar las propiedades de la base de datos. Usa métodos de SqlUtils
+ * Gestiona la configuración y la inicialización de la base de datos SQLite.
+ * Proporciona funcionalidades para crear la base de datos, ejecutar scripts SQL iniciales
+ * y gestionar las propiedades de conexión.
  */
 public class SQLiteConfig {
+    /** URL de conexión JDBC */
     private String jdbcUrl;
+    
+    /** Clase del driver JDBC */
     private String driverClass;
+    
+    /** Tamaño mínimo del pool de conexiones */
     private int minPoolSize;
+    
+    /** Tamaño máximo del pool de conexiones */
     private int maxPoolSize;
+    
+    /** Nombre de la base de datos */
     private String dbName;
+    
+    /** Script SQL de inicialización */
     private String initScript;
     
-    public static final int CONNECTION_TIMEOUT = 30000; // 30 segundos
+    /** Tiempo máximo de espera para una conexión (30 segundos) */
+    public static final int CONNECTION_TIMEOUT = 30000;
 
+    /**
+     * Constructor de la configuración SQLite.
+     * @param dbPath Ruta al archivo de la base de datos
+     * @param initScriptPath Ruta opcional al script de inicialización
+     */
     public SQLiteConfig(String dbPath, Optional<String> initScriptPath) {
         this.dbName = dbPath;
         this.initScript = initScriptPath.orElse(null);
@@ -41,6 +60,9 @@ public class SQLiteConfig {
         initializeIfNeeded();
     }
 
+    /**
+     * Verifica si la base de datos necesita ser inicializada y la crea si es necesario.
+     */
     private void initializeIfNeeded() {
         Path dbPath = Path.of(dbName);
         if (!Files.exists(dbPath)) {
@@ -48,6 +70,10 @@ public class SQLiteConfig {
         }
     }
 
+    /**
+     * Crea una nueva base de datos y ejecuta el script de inicialización si existe.
+     * @throws RuntimeException si hay errores durante la creación
+     */
     private void createDatabase() {
         try {
             try (Connection conn = DriverManager.getConnection(jdbcUrl)) {
@@ -58,6 +84,14 @@ public class SQLiteConfig {
         }
     }
 
+    /**
+     * Divide un script SQL en sentencias individuales.
+     * Maneja correctamente bloques BEGIN/END y casos especiales.
+     * 
+     * @param st InputStream con el contenido del script SQL
+     * @return Lista de sentencias SQL
+     * @throws IOException si hay errores al leer el script
+     */
     private List<String> splitSQL(InputStream st) throws IOException {
         Pattern beginPattern = Pattern.compile("\\b(BEGIN|CASE)\\b", Pattern.CASE_INSENSITIVE);
         Pattern endPattern = Pattern.compile("\\bEND\\b", Pattern.CASE_INSENSITIVE);
@@ -91,6 +125,14 @@ public class SQLiteConfig {
         }
     }
 
+    /**
+     * Ejecuta un script SQL en la base de datos.
+     * Las sentencias se ejecutan dentro de una transacción.
+     * 
+     * @param conn Conexión a la base de datos
+     * @throws SQLException si hay errores en la ejecución del script
+     * @throws IOException si hay errores al leer el script
+     */
     private void executeSqlScript(Connection conn) throws SQLException, IOException {
         try (
             InputStream in = getClass().getClassLoader().getResourceAsStream(initScript);
@@ -117,9 +159,27 @@ public class SQLiteConfig {
         }
     }
 
-    // Getters necesarios
+    /**
+     * Obtiene la URL JDBC de conexión.
+     * @return URL JDBC
+     */
     public String getJdbcUrl() { return jdbcUrl; }
+
+    /**
+     * Obtiene la clase del driver JDBC.
+     * @return Nombre de la clase del driver
+     */
     public String getDriverClass() { return driverClass; }
+
+    /**
+     * Obtiene el tamaño mínimo del pool de conexiones.
+     * @return Tamaño mínimo del pool
+     */
     public int getMinPoolSize() { return minPoolSize; }
+
+    /**
+     * Obtiene el tamaño máximo del pool de conexiones.
+     * @return Tamaño máximo del pool
+     */
     public int getMaxPoolSize() { return maxPoolSize; }
 }
