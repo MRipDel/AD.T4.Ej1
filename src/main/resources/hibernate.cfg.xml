@@ -27,8 +27,8 @@
         <property name="hibernate.use_sql_comments">true</property>
 
         <!-- Mapeo de clases de entidad -->
-        <mapping class="ad.t4_1.models.Cliente"/>
-        <mapping class="ad.t4_1.models.Pedido"/>
-        <mapping class="ad.t4_1.models.ZonaEnvio"/>
+        <mapping class="ad.t5_1.models.Cliente"/>
+        <mapping class="ad.t5_1.models.Pedido"/>
+        <mapping class="ad.t5_1.models.ZonaEnvio"/>
     </session-factory>
 </hibernate-configuration>

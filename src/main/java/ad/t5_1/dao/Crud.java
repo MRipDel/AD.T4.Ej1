@@ -1,10 +1,10 @@
-package ad.t4_1.dao;
+package ad.t5_1.dao;
 
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import ad.t4_1.models.Entity;
+import ad.t5_1.models.Entity;
 
 /**
  * Interfaz que define las operaciones CRUD básicas

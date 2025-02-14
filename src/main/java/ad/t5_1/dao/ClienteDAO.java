@@ -1,4 +1,4 @@
-package ad.t4_1.dao;
+package ad.t5_1.dao;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -10,8 +10,8 @@ import java.util.stream.Stream;
 
 import javax.sql.DataSource;
 
-import ad.t4_1.models.Cliente;
-import ad.t4_1.db.SQLiteConnectionPool;
+import ad.t5_1.db.SQLiteConnectionPool;
+import ad.t5_1.models.Cliente;
 
 /**
  * Clase que implementa las operaciones CRUD para la entidad Cliente en la base de datos.

@@ -1,4 +1,4 @@
-package ad.t4_1.ui;
+package ad.t5_1.ui;
 
 /**
  * Interfaz base para todas las implementaciones de interfaz de usuario.
