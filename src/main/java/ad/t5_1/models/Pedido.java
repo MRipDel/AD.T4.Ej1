@@ -1,47 +1,42 @@
 package ad.t5_1.models;
-/**
- * @author Manuel Ripalda Delgado
- */
-import java.time.LocalDate;
-/**
- * Modela un pedido
- */
-public class Pedido implements Entity{
-    private int id;
-    private LocalDate fecha;
-    private double importeTotal;
-    private int idCliente;
 
-    /**
-     * Constructor vacío
-     */
+import jakarta.persistence.*;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "Pedidos")
+public class Pedido{
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_pedido")
+    private int id;
+    
+    @Column(name = "fecha", nullable = false)
+    private LocalDate fecha;
+    
+    @Column(name = "importe_total", nullable = false, precision = 10, scale = 2)
+    private double importeTotal;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_cliente", nullable = false)
+    private Cliente cliente;
+
     public Pedido() {
         super();
     }
 
-    /**
-     * Constructor con todos los parámetros
-     * @param id
-     * @param fecha
-     * @param importeTotal
-     * @param idCliente
-     */
     public Pedido(int id, LocalDate fecha, double importeTotal, int idCliente) {
         this.id = id;
         this.fecha = fecha;
         this.importeTotal = importeTotal;
-        this.idCliente = idCliente;
     }
 
-    /* Getters y setters */
-    @Override
     public int getId() {
         return id;
     }
 
-    @Override
     public void setId(int id) {
-        this.id=id;
+        this.id = id;
     }
 
     public LocalDate getFecha() {
@@ -60,11 +55,19 @@ public class Pedido implements Entity{
         this.importeTotal = importeTotal;
     }
 
-    public int getIdCliente() {
-        return idCliente;
+    public Cliente getCliente() {
+        return cliente;
     }
-
+    
+    public void setCliente(Cliente cliente) {
+        this.cliente = cliente;
+    }
+    
+    public int getIdCliente() {
+        return cliente != null ? cliente.getId() : 0;
+    }
+    
     public void setIdCliente(int idCliente) {
-        this.idCliente = idCliente;
+        // Este método se mantiene por compatibilidad pero no se usa directamente con JPA
     }
 }

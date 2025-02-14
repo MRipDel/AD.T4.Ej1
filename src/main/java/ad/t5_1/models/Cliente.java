@@ -1,50 +1,64 @@
 package ad.t5_1.models;
-/**
- * @author Manuel Ripalda Delgado
- */
-/**
- * Modela un cliente
- */
-public class Cliente implements Entity{
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+
+import java.util.List;
+
+@Entity
+@Table(name = "Clientes")
+public class Cliente {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_cliente")
     private int id;
-    private String nombre;
-    private String email;
-    private String telefono;
-    private int idZona;
     
-    /**
-     * Constructor sin parámetros
-     */
+    @Column(name = "nombre", nullable = false, length = 100)
+    private String nombre;
+    
+    @Column(name = "email", nullable = false, length = 100)
+    private String email;
+    
+    @Column(name = "telefono")
+    private String telefono;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_zona", nullable = false)
+    private ZonaEnvio zona;
+    
+    @OneToMany(mappedBy = "cliente", cascade = CascadeType.ALL)
+    private List<Pedido> pedidos;
+
+    // Constructor sin parámetros
     public Cliente() {
         super();
     }
 
-    /**
-     * Constructor con todos los parámetros
-     * @param id
-     * @param nombre
-     * @param email
-     * @param telefono
-     * @param idZona
-     */
+    // Constructor con parámetros
     public Cliente(int id, String nombre, String email, String telefono, int idZona) {
         this.id = id;
         this.nombre = nombre;
         this.email = email;
         this.telefono = telefono;
-        this.idZona = idZona;
     }
 
-    /* Getters y setters */
 
-    @Override
     public int getId() {
         return id;
     }
     
-    @Override
+
     public void setId(int id) {
-        this.id=id;
+        this.id = id;
     }
     
     public String getNombre() {
@@ -71,14 +85,27 @@ public class Cliente implements Entity{
         this.telefono = telefono;
     }
     
+    public ZonaEnvio getZona() {
+        return zona;
+    }
+    
+    public void setZona(ZonaEnvio zona) {
+        this.zona = zona;
+    }
+    
     public int getIdZona() {
-        return idZona;
+        return zona != null ? zona.getId() : 0;
     }
     
     public void setIdZona(int idZona) {
-        this.idZona = idZona;
+        // Este método se mantiene por compatibilidad pero no se usa directamente con JPA
     }
     
+    public List<Pedido> getPedidos() {
+        return pedidos;
+    }
     
-    
+    public void setPedidos(List<Pedido> pedidos) {
+        this.pedidos = pedidos;
+    }
 }

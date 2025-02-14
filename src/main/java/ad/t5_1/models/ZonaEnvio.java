@@ -1,44 +1,41 @@
 package ad.t5_1.models;
-/**
- * @author Manuel Ripalda Delgado
- */
-/**
- * Modela una zona de envío
- */
-public class ZonaEnvio implements Entity{
+
+import jakarta.persistence.*;
+import java.util.List;
+
+@Entity
+@Table(name = "Zonas_Envio")
+public class ZonaEnvio {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_zona")
     private int id;
+    
+    @Column(name = "nombre_zona", nullable = false, length = 100)
     private String nombre;
+    
+    @Column(name = "tarifa_envio", nullable = false, precision = 10, scale = 2)
     private double tarifa;
     
-    /**
-     * Constructor vacío
-     */
+    @OneToMany(mappedBy = "zona", cascade = CascadeType.ALL)
+    private List<Cliente> clientes;
+
     public ZonaEnvio() {
         super();
     }
 
-    /**
-     * Constructor con todos los parámetros
-     * @param id
-     * @param nombre
-     * @param tarifa
-     */
     public ZonaEnvio(int id, String nombre, double tarifa) {
         this.id = id;
         this.nombre = nombre;
         this.tarifa = tarifa;
     }
 
-    /* Getters y setters */
-
-    @Override
     public int getId() {
         return id;
     }
 
-    @Override
     public void setId(int id) {
-        this.id=id;    
+        this.id = id;
     }
 
     public String getNombre() {
@@ -55,5 +52,13 @@ public class ZonaEnvio implements Entity{
 
     public void setTarifa(double tarifa) {
         this.tarifa = tarifa;
+    }
+    
+    public List<Cliente> getClientes() {
+        return clientes;
+    }
+    
+    public void setClientes(List<Cliente> clientes) {
+        this.clientes = clientes;
     }
 }
