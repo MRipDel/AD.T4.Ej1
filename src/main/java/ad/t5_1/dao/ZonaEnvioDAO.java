@@ -1,230 +1,212 @@
 package ad.t5_1.dao;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.List;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import javax.sql.DataSource;
-
-import ad.t5_1.db.SQLiteConnectionPool;
+import ad.t5_1.db.HibernateSessionManager;
 import ad.t5_1.models.ZonaEnvio;
 
 /**
- * Implementación del acceso a datos para la entidad ZonaEnvio.
- * Proporciona métodos para realizar operaciones CRUD básicas sobre la tabla Zonas_Envio,
- * así como consultas específicas relacionadas con la gestión de zonas de envío y sus estadísticas.
+ * Implementación del DAO para ZonaEnvio usando Hibernate pero manteniendo 
+ * la interfaz original Crud<ZonaEnvio>.
  */
 public class ZonaEnvioDAO implements Crud<ZonaEnvio> {
     
-    /** Fuente de datos para la conexión a la base de datos */
-    private final DataSource dataSource;
-
     /**
-     * Constructor por defecto.
-     * Inicializa la fuente de datos obteniendo una instancia del pool de conexiones.
-     */
-    public ZonaEnvioDAO() {
-        this.dataSource = SQLiteConnectionPool.getInstance().getDataSource();
-    }
-
-    /**
-     * Convierte un registro de la base de datos en un objeto ZonaEnvio.
-     * @param rs ResultSet con los datos de la zona de envío
-     * @return Objeto ZonaEnvio con los datos del registro
-     * @throws SQLException si ocurre un error al acceder a los datos
-     */
-    private static ZonaEnvio resultToZonaEnvio(ResultSet rs) throws SQLException {
-        return new ZonaEnvio(
-            rs.getInt("id_zona"),
-            rs.getString("nombre_zona"),
-            rs.getDouble("tarifa_envio")
-        );
-    }
-
-    /**
-     * Recupera todas las zonas de envío almacenadas en la base de datos.
-     * @return Stream de objetos ZonaEnvio
-     * @throws RuntimeException si ocurre un error en el acceso a la base de datos
+     * Obtiene todas las zonas de envío de la base de datos.
+     * @return Un Stream de objetos ZonaEnvio.
      */
     @Override
     public Stream<ZonaEnvio> get() {
-        final String sql = "SELECT * FROM Zonas_Envio";
-        try {
-            Connection conn = dataSource.getConnection();
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(sql);
-            
-            return Stream.generate(() -> {
-                try {
-                    return rs.next() ? resultToZonaEnvio(rs) : null;
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
-            }).takeWhile(z -> z != null)
-              .onClose(() -> {
-                try {
-                    rs.close();
-                    stmt.close();
-                    conn.close();
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
+        Session session = HibernateSessionManager.getInstance().getSessionFactory().openSession();
+        return session.createQuery("FROM ZonaEnvio", ZonaEnvio.class)
+            .stream()
+            .onClose(() -> {
+                if (session != null && session.isOpen()) {
+                    session.close();
                 }
             });
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     /**
-     * Recupera una zona de envío específica por su identificador.
-     * @param id Identificador de la zona de envío a buscar
-     * @return Optional con la zona de envío si existe, Optional vacío si no
-     * @throws RuntimeException si ocurre un error en el acceso a la base de datos
+     * Obtiene una zona de envío específica por su ID.
+     * @param id El ID de la zona a buscar.
+     * @return Un Optional que contiene la zona si existe.
      */
     @Override
     public Optional<ZonaEnvio> get(int id) {
-        final String sql = "SELECT * FROM Zonas_Envio WHERE id_zona = ?";
-        
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setInt(1, id);
-            ResultSet rs = pstmt.executeQuery();
-            
-            return Optional.of(resultToZonaEnvio(rs));
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        try (Session session = HibernateSessionManager.getInstance().getSessionFactory().openSession()) {
+            return Optional.ofNullable(session.find(ZonaEnvio.class, id));
         }
     }
 
     /**
      * Inserta una nueva zona de envío en la base de datos.
-     * @param zona ZonaEnvio a insertar
-     * @throws RuntimeException si ocurre un error en el acceso a la base de datos
+     * @param zonaEnvio La zona a insertar.
      */
     @Override
-    public void insert(ZonaEnvio zona) {
-        final String sql = "INSERT INTO Zonas_Envio (nombre_zona, tarifa_envio) VALUES (?, ?)";
-        
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            
-            pstmt.setString(1, zona.getNombre());
-            pstmt.setDouble(2, zona.getTarifa());
-            
-            pstmt.executeUpdate();
-            
-            ResultSet rs = pstmt.getGeneratedKeys();
-            if (rs.next()) {
-                zona.setId(rs.getInt(1));
+    public void insert(ZonaEnvio zonaEnvio) {
+        Transaction transaction = null;
+        try (Session session = HibernateSessionManager.getInstance().getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
+            session.persist(zonaEnvio);
+            transaction.commit();
+        } catch (Exception e) {
+            if (transaction != null && transaction.isActive()) {
+                try {
+                    transaction.rollback();
+                } catch (Exception rollbackEx) {
+                    System.err.println("Error durante rollback: " + rollbackEx.getMessage());
+                }
             }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error inserting shipping zone", e);
         }
     }
 
     /**
      * Elimina una zona de envío de la base de datos.
-     * @param id Identificador de la zona de envío a eliminar
-     * @return true si se eliminó la zona, false si no existía
-     * @throws RuntimeException si ocurre un error en el acceso a la base de datos
+     * @param id El ID de la zona a eliminar.
+     * @return true si la zona fue eliminada, false si no se encontró.
      */
     @Override
     public boolean delete(int id) {
-        final String sql = "DELETE FROM Zonas_Envio WHERE id_zona = ?";
-        
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        Transaction transaction = null;
+        try (Session session = HibernateSessionManager.getInstance().getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
             
-            pstmt.setInt(1, id);
-            return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+            // Verificar si hay clientes asociados antes de eliminar
+            Long clientCount = session.createQuery(
+                "SELECT COUNT(c) FROM Cliente c WHERE c.zona.id = :zonaId", 
+                Long.class)
+                .setParameter("zonaId", id)
+                .uniqueResult();
+                
+            if (clientCount > 0) {
+                // No podemos eliminar si hay clientes asociados
+                transaction.commit();
+                return false;
+            }
+            
+            ZonaEnvio zonaEnvio = session.find(ZonaEnvio.class, id);
+            if (zonaEnvio != null) {
+                session.remove(zonaEnvio);
+                transaction.commit();
+                return true;
+            }
+            transaction.commit();
+            return false;
+        } catch (Exception e) {
+            if (transaction != null && transaction.isActive()) {
+                try {
+                    transaction.rollback();
+                } catch (Exception rollbackEx) {
+                    System.err.println("Error durante rollback: " + rollbackEx.getMessage());
+                }
+            }
+            throw new RuntimeException("Error deleting shipping zone", e);
         }
     }
 
     /**
      * Actualiza los datos de una zona de envío existente.
-     * @param zona ZonaEnvio con los datos actualizados
-     * @return true si se actualizó la zona, false si no existía
-     * @throws RuntimeException si ocurre un error en el acceso a la base de datos
+     * @param zonaEnvio La zona con los datos actualizados.
+     * @return true si la zona fue actualizada, false si no se encontró.
      */
     @Override
-    public boolean update(ZonaEnvio zona) {
-        final String sql = "UPDATE Zonas_Envio SET nombre_zona = ?, tarifa_envio = ? WHERE id_zona = ?";
-        
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+    public boolean update(ZonaEnvio zonaEnvio) {
+        Transaction transaction = null;
+        try (Session session = HibernateSessionManager.getInstance().getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
             
-            pstmt.setString(1, zona.getNombre());
-            pstmt.setDouble(2, zona.getTarifa());
-            pstmt.setInt(3, zona.getId());
+            ZonaEnvio existingZona = session.find(ZonaEnvio.class, zonaEnvio.getId());
+            if (existingZona == null) {
+                transaction.commit();
+                return false;
+            }
             
-            return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+            session.merge(zonaEnvio);
+            transaction.commit();
+            return true;
+        } catch (Exception e) {
+            if (transaction != null && transaction.isActive()) {
+                try {
+                    transaction.rollback();
+                } catch (Exception rollbackEx) {
+                    System.err.println("Error durante rollback: " + rollbackEx.getMessage());
+                }
+            }
+            throw new RuntimeException("Error updating shipping zone", e);
         }
     }
 
     /**
-     * Actualiza el identificador de una zona de envío.
-     * @param oldId Identificador actual de la zona de envío
-     * @param newId Nuevo identificador para la zona de envío
-     * @return true si se actualizó el identificador, false si no existía la zona
-     * @throws RuntimeException si ocurre un error en el acceso a la base de datos
+     * Actualiza el ID de una zona de envío.
+     * @param oldId El ID actual de la zona.
+     * @param newId El nuevo ID para la zona.
+     * @return true si el ID fue actualizado, false si no se encontró la zona.
      */
     @Override
     public boolean update(int oldId, int newId) {
-        final String sql = "UPDATE Zonas_Envio SET id_zona = ? WHERE id_zona = ?";
-        
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        Transaction transaction = null;
+        try (Session session = HibernateSessionManager.getInstance().getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
             
-            pstmt.setInt(1, newId);
-            pstmt.setInt(2, oldId);
+            // Verificar que no exista ya una zona con el nuevo ID
+            ZonaEnvio existingWithNewId = session.find(ZonaEnvio.class, newId);
+            if (existingWithNewId != null) {
+                transaction.commit();
+                return false;
+            }
             
-            return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+            ZonaEnvio zona = session.find(ZonaEnvio.class, oldId);
+            if (zona == null) {
+                transaction.commit();
+                return false;
+            }
+            
+            // Crear una copia con el nuevo ID
+            ZonaEnvio nuevaZona = new ZonaEnvio();
+            nuevaZona.setId(newId);
+            nuevaZona.setNombre(zona.getNombre());
+            nuevaZona.setTarifa(zona.getTarifa());
+            
+            // Eliminar el original y persistir el nuevo
+            session.remove(zona);
+            session.persist(nuevaZona);
+            
+            transaction.commit();
+            return true;
+        } catch (Exception e) {
+            if (transaction != null && transaction.isActive()) {
+                try {
+                    transaction.rollback();
+                } catch (Exception rollbackEx) {
+                    System.err.println("Error durante rollback: " + rollbackEx.getMessage());
+                }
+            }
+            throw new RuntimeException("Error updating shipping zone ID", e);
         }
     }
-
+    
     /**
      * Obtiene todas las zonas de envío junto con el número de clientes en cada zona.
-     * Realiza un LEFT JOIN con la tabla de clientes para contar el número de clientes
-     * por zona, incluyendo zonas sin clientes.
-     * 
-     * @return Stream de objetos ZonaEnvio con información adicional sobre el número de clientes
-     * @throws RuntimeException si ocurre un error en el acceso a la base de datos
+     * @return Stream de objetos ZonaEnvio con información sobre sus clientes
      */
     public Stream<ZonaEnvio> getZonasConNumeroClientes() {
-        final String sql = """
-            SELECT z.*, COUNT(c.id_cliente) as num_clientes 
-            FROM Zonas_Envio z 
-            LEFT JOIN Clientes c ON z.id_zona = c.id_zona 
-            GROUP BY z.id_zona
-            """;
+        Session session = HibernateSessionManager.getInstance().getSessionFactory().openSession();
         
-        try {
-            Connection conn = dataSource.getConnection();
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(sql);
-            List<ZonaEnvio> listaZonas = new ArrayList<>();
-            while (rs.next()) {
-                listaZonas.add(new ZonaEnvio(
-                    rs.getInt("id_zona"),
-                    rs.getString("nombre_zona"),
-                    rs.getDouble("tarifa_envio")));
-            }
-            return listaZonas.stream();
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+        // Con Hibernate podemos obtener las zonas con sus clientes precargados
+        return session.createQuery(
+                "SELECT DISTINCT z FROM ZonaEnvio z LEFT JOIN FETCH z.clientes", 
+                ZonaEnvio.class)
+            .stream()
+            .onClose(() -> {
+                if (session != null && session.isOpen()) {
+                    session.close();
+                }
+            });
     }
 }

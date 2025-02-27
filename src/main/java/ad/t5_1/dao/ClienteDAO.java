@@ -1,131 +1,79 @@
 package ad.t5_1.dao;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import javax.sql.DataSource;
-
-import ad.t5_1.db.SQLiteConnectionPool;
+import ad.t5_1.db.HibernateSessionManager;
 import ad.t5_1.models.Cliente;
+import ad.t5_1.models.ZonaEnvio;
 
 /**
- * Clase que implementa las operaciones CRUD para la entidad Cliente en la base de datos.
- * Proporciona métodos para crear, leer, actualizar y eliminar registros de clientes.
+ * Implementación del DAO para Cliente usando Hibernate pero manteniendo 
+ * la interfaz original Crud<Cliente>.
  */
 public class ClienteDAO implements Crud<Cliente> {
     
-    /** El origen de datos para las conexiones a la base de datos */
-    private final DataSource dataSource;
-
-    /**
-     * Constructor por defecto que inicializa el DataSource desde el pool de conexiones.
-     */
-    public ClienteDAO() {
-        this.dataSource = SQLiteConnectionPool.getInstance().getDataSource();
-    }
-
-    /**
-     * Convierte un ResultSet en un objeto Cliente.
-     * @param rs El ResultSet que contiene los datos del cliente.
-     * @return Un nuevo objeto Cliente con los datos del ResultSet.
-     * @throws SQLException Si hay un error al acceder a los datos del ResultSet.
-     */
-    private static Cliente resultToCliente(ResultSet rs) throws SQLException {
-        return new Cliente(
-            rs.getInt("id_cliente"),
-            rs.getString("nombre"),
-            rs.getString("email"),
-            rs.getString("telefono"),
-            rs.getInt("id_zona")
-        );
-    }
-
     /**
      * Obtiene todos los clientes de la base de datos.
      * @return Un Stream de objetos Cliente.
-     * @throws RuntimeException Si hay un error al acceder a la base de datos.
      */
     @Override
     public Stream<Cliente> get() {
-        final String sql = "SELECT * FROM Clientes";
-        try {
-            Connection conn = dataSource.getConnection();
-            Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(sql);
-            
-            return Stream.generate(() -> {
-                try {
-                    return rs.next() ? resultToCliente(rs) : null;
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
-            }).takeWhile(c -> c != null)
-              .onClose(() -> {
-                try {
-                    rs.close();
-                    stmt.close();
-                    conn.close();
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
+        Session session = HibernateSessionManager.getInstance().getSessionFactory().openSession();
+        return session.createQuery("FROM Cliente", Cliente.class)
+            .stream()
+            .onClose(() -> {
+                if (session != null && session.isOpen()) {
+                    session.close();
                 }
             });
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     /**
      * Obtiene un cliente específico por su ID.
      * @param id El ID del cliente a buscar.
      * @return Un Optional que contiene el cliente si existe.
-     * @throws RuntimeException Si hay un error al acceder a la base de datos.
      */
     @Override
     public Optional<Cliente> get(int id) {
-        final String sql = "SELECT * FROM Clientes WHERE id_cliente = ?";
-        
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setInt(1, id);
-            ResultSet rs = pstmt.executeQuery();
-            
-            return rs.next() ? Optional.of(resultToCliente(rs)) : Optional.empty();
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        try (Session session = HibernateSessionManager.getInstance().getSessionFactory().openSession()) {
+            return Optional.ofNullable(session.find(Cliente.class, id));
         }
     }
 
     /**
      * Inserta un nuevo cliente en la base de datos.
      * @param cliente El cliente a insertar.
-     * @throws RuntimeException Si hay un error al acceder a la base de datos.
      */
     @Override
     public void insert(Cliente cliente) {
-        final String sql = "INSERT INTO Clientes (nombre, email, telefono, id_zona) VALUES (?, ?, ?, ?)";
-        
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        Transaction transaction = null;
+        try (Session session = HibernateSessionManager.getInstance().getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
             
-            pstmt.setString(1, cliente.getNombre());
-            pstmt.setString(2, cliente.getEmail());
-            pstmt.setString(3, cliente.getTelefono());
-            pstmt.setInt(4, cliente.getIdZona());
-            
-            pstmt.executeUpdate();
-            
-            ResultSet rs = pstmt.getGeneratedKeys();
-            if (rs.next()) {
-                cliente.setId(rs.getInt(1));
+            // Manejar la relación con ZonaEnvio
+            if (cliente.getZona() == null && cliente.getIdZona() > 0) {
+                ZonaEnvio zona = session.find(ZonaEnvio.class, cliente.getIdZona());
+                if (zona != null) {
+                    cliente.setZona(zona);
+                }
             }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+            
+            session.persist(cliente);
+            transaction.commit();
+        } catch (Exception e) {
+            if (transaction != null && transaction.isActive()) {
+                try {
+                    transaction.rollback();
+                } catch (Exception rollbackEx) {
+                    // Log el error de rollback pero no lo propagamos
+                    System.err.println("Error durante rollback: " + rollbackEx.getMessage());
+                }
+            }
+            throw new RuntimeException("Error inserting client", e);
         }
     }
 
@@ -133,19 +81,29 @@ public class ClienteDAO implements Crud<Cliente> {
      * Elimina un cliente de la base de datos.
      * @param id El ID del cliente a eliminar.
      * @return true si el cliente fue eliminado, false si no se encontró.
-     * @throws RuntimeException Si hay un error al acceder a la base de datos.
      */
     @Override
     public boolean delete(int id) {
-        final String sql = "DELETE FROM Clientes WHERE id_cliente = ?";
-        
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setInt(1, id);
-            return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        Transaction transaction = null;
+        try (Session session = HibernateSessionManager.getInstance().getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
+            Cliente cliente = session.find(Cliente.class, id);
+            if (cliente != null) {
+                session.remove(cliente);
+                transaction.commit();
+                return true;
+            }
+            transaction.commit();
+            return false;
+        } catch (Exception e) {
+            if (transaction != null && transaction.isActive()) {
+                try {
+                    transaction.rollback();
+                } catch (Exception rollbackEx) {
+                    System.err.println("Error durante rollback: " + rollbackEx.getMessage());
+                }
+            }
+            throw new RuntimeException("Error deleting client", e);
         }
     }
 
@@ -153,24 +111,39 @@ public class ClienteDAO implements Crud<Cliente> {
      * Actualiza los datos de un cliente existente.
      * @param cliente El cliente con los datos actualizados.
      * @return true si el cliente fue actualizado, false si no se encontró.
-     * @throws RuntimeException Si hay un error al acceder a la base de datos.
      */
     @Override
     public boolean update(Cliente cliente) {
-        final String sql = "UPDATE Clientes SET nombre = ?, email = ?, telefono = ?, id_zona = ? WHERE id_cliente = ?";
-        
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        Transaction transaction = null;
+        try (Session session = HibernateSessionManager.getInstance().getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
             
-            pstmt.setString(1, cliente.getNombre());
-            pstmt.setString(2, cliente.getEmail());
-            pstmt.setString(3, cliente.getTelefono());
-            pstmt.setInt(4, cliente.getIdZona());
-            pstmt.setInt(5, cliente.getId());
+            Cliente existingCliente = session.find(Cliente.class, cliente.getId());
+            if (existingCliente == null) {
+                transaction.commit();
+                return false;
+            }
             
-            return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+            // Manejar la relación con ZonaEnvio
+            if (cliente.getZona() == null && cliente.getIdZona() > 0) {
+                ZonaEnvio zona = session.find(ZonaEnvio.class, cliente.getIdZona());
+                if (zona != null) {
+                    cliente.setZona(zona);
+                }
+            }
+            
+            session.merge(cliente);
+            transaction.commit();
+            return true;
+        } catch (Exception e) {
+            if (transaction != null && transaction.isActive()) {
+                try {
+                    transaction.rollback();
+                } catch (Exception rollbackEx) {
+                    System.err.println("Error durante rollback: " + rollbackEx.getMessage());
+                }
+            }
+            throw new RuntimeException("Error updating client", e);
         }
     }
 
@@ -179,21 +152,50 @@ public class ClienteDAO implements Crud<Cliente> {
      * @param oldId El ID actual del cliente.
      * @param newId El nuevo ID para el cliente.
      * @return true si el ID fue actualizado, false si no se encontró el cliente.
-     * @throws RuntimeException Si hay un error al acceder a la base de datos.
      */
     @Override
     public boolean update(int oldId, int newId) {
-        final String sql = "UPDATE Clientes SET id_cliente = ? WHERE id_cliente = ?";
-        
-        try (Connection conn = dataSource.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        Transaction transaction = null;
+        try (Session session = HibernateSessionManager.getInstance().getSessionFactory().openSession()) {
+            transaction = session.beginTransaction();
             
-            pstmt.setInt(1, newId);
-            pstmt.setInt(2, oldId);
+            // En Hibernate no es sencillo cambiar un ID directamente
+            // Tenemos que obtener el objeto, crear uno nuevo con el ID nuevo, y eliminar el original
+            Cliente cliente = session.find(Cliente.class, oldId);
+            if (cliente == null) {
+                transaction.commit();
+                return false;
+            }
             
-            return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+            // Verificar que no exista ya un cliente con el nuevo ID
+            if (session.find(Cliente.class, newId) != null) {
+                transaction.commit();
+                return false;
+            }
+            
+            // Crear una copia con el nuevo ID
+            Cliente nuevoCliente = new Cliente();
+            nuevoCliente.setId(newId);
+            nuevoCliente.setNombre(cliente.getNombre());
+            nuevoCliente.setEmail(cliente.getEmail());
+            nuevoCliente.setTelefono(cliente.getTelefono());
+            nuevoCliente.setZona(cliente.getZona());
+            
+            // Eliminar el original y persistir el nuevo
+            session.remove(cliente);
+            session.persist(nuevoCliente);
+            
+            transaction.commit();
+            return true;
+        } catch (Exception e) {
+            if (transaction != null && transaction.isActive()) {
+                try {
+                    transaction.rollback();
+                } catch (Exception rollbackEx) {
+                    System.err.println("Error durante rollback: " + rollbackEx.getMessage());
+                }
+            }
+            throw new RuntimeException("Error updating client ID", e);
         }
     }
 }

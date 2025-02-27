@@ -5,7 +5,7 @@
             "type": "java",
             "name": "Launch Program",
             "request": "launch",
-            "mainClass": "ad.t4_1.Main",
+            "mainClass": "ad.t5_1.Main",
             "projectName": "t4.ej1",
             "args": [
                 "--db", "pedidos.db",

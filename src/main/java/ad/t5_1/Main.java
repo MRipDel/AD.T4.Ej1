@@ -2,7 +2,7 @@ package ad.t5_1;
 
 import java.util.Optional;
 
-import ad.t5_1.db.SQLiteConnectionPool;
+import ad.t5_1.db.HibernateSessionManager;
 import ad.t5_1.ui.UIFactory;
 import ad.t5_1.ui.UserInterface;
 
@@ -62,8 +62,7 @@ public class Main {
         }
 
         try {
-            // Inicializar la base de datos
-            SQLiteConnectionPool.getInstance(dbPath, Optional.of(initScript));
+            HibernateSessionManager.getInstance(dbPath, Optional.of(initScript));
             
             // Crear y ejecutar la interfaz de usuario
             UserInterface ui = UIFactory.createUI(uiType);
@@ -77,11 +76,11 @@ public class Main {
             e.printStackTrace();
             System.exit(1);
         } finally {
-            // Asegurar que el pool de conexiones se cierra
+            // Asegurar que se cierren los recursos
             try {
-                SQLiteConnectionPool.getInstance().closePool();
+                HibernateSessionManager.getInstance().closePool();
             } catch (Exception e) {
-                System.err.println("Error cerrando el pool de conexiones: " + e.getMessage());
+                System.err.println("Error cerrando Hibernate: " + e.getMessage());
             }
         }
     }

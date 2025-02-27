@@ -4,13 +4,13 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import ad.t5_1.models.Entity;
+import ad.t5_1.models.Entidad;
 
 /**
  * Interfaz que define las operaciones CRUD básicas
  * que deben implementar todas las clases DAO.
  */
-public interface Crud<T extends Entity> {
+public interface Crud<T extends Entidad> {
 
     /**
      * Obtiene un objeto a partir de su identificador.
