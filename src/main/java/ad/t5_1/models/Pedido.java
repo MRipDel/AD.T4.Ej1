@@ -5,7 +5,7 @@ import java.time.LocalDate;
 
 @Entity
 @Table(name = "Pedidos")
-public class Pedido{
+public class Pedido {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_pedido")
@@ -14,23 +14,32 @@ public class Pedido{
     @Column(name = "fecha", nullable = false)
     private LocalDate fecha;
     
-    @Column(name = "importe_total", nullable = false, precision = 10, scale = 2)
+    @Column(name = "importe_total", nullable = false)
     private double importeTotal;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_cliente", nullable = false)
     private Cliente cliente;
 
+    // Constructor sin parámetros
     public Pedido() {
-        super();
+        this.fecha = LocalDate.now();
     }
 
-    public Pedido(int id, LocalDate fecha, double importeTotal, int idCliente) {
+    // Constructor completo
+    public Pedido(int id, LocalDate fecha, double importeTotal, Cliente cliente) {
         this.id = id;
         this.fecha = fecha;
         this.importeTotal = importeTotal;
+        this.cliente = cliente;
     }
-
+    // Constructor sin el id
+    public Pedido( LocalDate fecha, double importeTotal, Cliente cliente) {
+        this.fecha = fecha;
+        this.importeTotal = importeTotal;
+        this.cliente = cliente;
+    }
+    // Getters y setters
     public int getId() {
         return id;
     }
@@ -58,16 +67,18 @@ public class Pedido{
     public Cliente getCliente() {
         return cliente;
     }
-    
+
     public void setCliente(Cliente cliente) {
         this.cliente = cliente;
     }
     
+    // Método para compatibilidad con la versión anterior
     public int getIdCliente() {
         return cliente != null ? cliente.getId() : 0;
     }
     
+    // Método para compatibilidad con la versión anterior
     public void setIdCliente(int idCliente) {
-        // Este método se mantiene por compatibilidad pero no se usa directamente con JPA
+        // Este método se mantiene por compatibilidad
     }
 }

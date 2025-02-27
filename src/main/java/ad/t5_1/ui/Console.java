@@ -2,6 +2,7 @@ package ad.t5_1.ui;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 import java.util.Scanner;
 
 import ad.t5_1.dao.*;
@@ -9,31 +10,18 @@ import ad.t5_1.models.*;
 
 /**
  * Implementación de la interfaz de usuario en modo consola.
- * Proporciona un menú interactivo para gestionar clientes, pedidos y zonas de envío
- * a través de la línea de comandos.
+ * Adaptada para trabajar con la implementación basada en Hibernate.
  */
 public class Console implements UserInterface {
-    /** Scanner para la lectura de entrada del usuario */
     private final Scanner scanner;
-    
-    /** DAO para operaciones con clientes */
     private final ClienteDAO clienteDAO;
-    
-    /** DAO para operaciones con pedidos */
     private final PedidoDAO pedidoDAO;
-    
-    /** DAO para operaciones con zonas de envío */
     private final ZonaEnvioDAO zonaDAO;
-    
-    /** Formateador de fechas para entrada/salida */
     private final DateTimeFormatter dateFormatter;
-    
-    /** Indica si se debe salir del programa */
     private boolean exit;
 
     /**
      * Constructor que inicializa los componentes necesarios para la interfaz.
-     * Configura el scanner, los DAOs y el formateador de fechas.
      */
     public Console() {
         this.scanner = new Scanner(System.in);
@@ -110,7 +98,7 @@ public class Console implements UserInterface {
      */
     private void mostrarClientes() {
         System.out.println("\n=== LISTADO DE CLIENTES ===");
-        clienteDAO.get().forEach(cliente -> 
+        clienteDAO.getAll().forEach(cliente -> 
             System.out.printf("ID: %d, Nombre: %s, Email: %s, Teléfono: %s, Zona: %d%n",
                 cliente.getId(), 
                 cliente.getNombre(), 
@@ -134,7 +122,7 @@ public class Console implements UserInterface {
         String telefono = scanner.nextLine();
         
         System.out.println("\nZonas de envío disponibles:");
-        zonaDAO.get().forEach(zona -> 
+        zonaDAO.getAll().forEach(zona -> 
             System.out.printf("%d - %s (Tarifa: %.2f€)%n", 
                 zona.getId(), 
                 zona.getNombre(), 
@@ -143,15 +131,18 @@ public class Console implements UserInterface {
         
         System.out.print("ID de la zona: ");
         int idZona = Integer.parseInt(scanner.nextLine());
+        Optional<ZonaEnvio> zonaOpt = zonaDAO.getById(idZona);
 
-        Cliente cliente = new Cliente();
-        cliente.setNombre(nombre);
-        cliente.setEmail(email);
-        cliente.setTelefono(telefono);
-        cliente.setIdZona(idZona);
-
-        clienteDAO.insert(cliente);
-        System.out.println("Cliente añadido con éxito.");
+        if(zonaOpt.isPresent()){
+            Cliente cliente = new Cliente();
+            cliente.setNombre(nombre);
+            cliente.setEmail(email);
+            cliente.setTelefono(telefono);
+            cliente.setZona(zonaOpt.get());
+            
+            clienteDAO.save(cliente);
+            System.out.println("Cliente añadido con éxito.");
+        }
     }
 
     /**
@@ -163,7 +154,7 @@ public class Console implements UserInterface {
         System.out.print("ID del cliente a modificar: ");
         int id = Integer.parseInt(scanner.nextLine());
 
-        var clienteOpt = clienteDAO.get(id);
+        Optional<Cliente> clienteOpt = clienteDAO.getById(id);
         if (clienteOpt.isEmpty()) {
             System.out.println("Cliente no encontrado.");
             return;
@@ -182,7 +173,7 @@ public class Console implements UserInterface {
         String telefono = scanner.nextLine();
         if (!telefono.isEmpty()) cliente.setTelefono(telefono);
 
-        clienteDAO.update(cliente);
+        clienteDAO.save(cliente);
         System.out.println("Cliente modificado con éxito.");
     }
 
@@ -206,7 +197,7 @@ public class Console implements UserInterface {
      */
     private void mostrarPedidos() {
         System.out.println("\n=== LISTADO DE PEDIDOS ===");
-        pedidoDAO.get().forEach(pedido -> 
+        pedidoDAO.getAll().forEach(pedido -> 
             System.out.printf("ID: %d, Fecha: %s, Importe: %.2f€, ID Cliente: %d%n",
                 pedido.getId(),
                 pedido.getFecha().format(dateFormatter),
@@ -223,21 +214,22 @@ public class Console implements UserInterface {
         System.out.println("\n=== AÑADIR PEDIDO ===");
         System.out.print("ID del cliente: ");
         int idCliente = Integer.parseInt(scanner.nextLine());
-
-        if (clienteDAO.get(idCliente).isEmpty()) {
+    
+        Optional<Cliente> clienteOpt = clienteDAO.getById(idCliente);
+        if (clienteOpt.isEmpty()) {
             System.out.println("Cliente no encontrado.");
             return;
         }
-
+    
         System.out.print("Importe total: ");
         double importe = Double.parseDouble(scanner.nextLine());
-
+    
         Pedido pedido = new Pedido();
-        pedido.setIdCliente(idCliente);
+        pedido.setCliente(clienteOpt.get()); // Establecer el cliente directamente
         pedido.setFecha(LocalDate.now());
         pedido.setImporteTotal(importe);
-
-        pedidoDAO.insert(pedido);
+    
+        pedidoDAO.save(pedido);
         System.out.println("Pedido añadido con éxito.");
     }
 
@@ -249,7 +241,7 @@ public class Console implements UserInterface {
         System.out.print("ID del pedido a modificar: ");
         int id = Integer.parseInt(scanner.nextLine());
 
-        var pedidoOpt = pedidoDAO.get(id);
+        Optional<Pedido> pedidoOpt = pedidoDAO.getById(id);
         if (pedidoOpt.isEmpty()) {
             System.out.println("Pedido no encontrado.");
             return;
@@ -263,7 +255,7 @@ public class Console implements UserInterface {
             pedido.setImporteTotal(Double.parseDouble(importeStr));
         }
 
-        pedidoDAO.update(pedido);
+        pedidoDAO.save(pedido);
         System.out.println("Pedido modificado con éxito.");
     }
 
@@ -305,7 +297,7 @@ public class Console implements UserInterface {
         System.out.print("ID del cliente: ");
         int idCliente = Integer.parseInt(scanner.nextLine());
 
-        var clienteOpt = clienteDAO.get(idCliente);
+        Optional<Cliente> clienteOpt = clienteDAO.getById(idCliente);
         if (clienteOpt.isEmpty()) {
             System.out.println("Cliente no encontrado.");
             return;
@@ -314,7 +306,7 @@ public class Console implements UserInterface {
         Cliente cliente = clienteOpt.get();
         System.out.printf("%nPedidos del cliente %s:%n", cliente.getNombre());
         
-        pedidoDAO.getPedidosPorCliente(idCliente).forEach(pedido ->
+        pedidoDAO.getByCliente(idCliente).forEach(pedido ->
             System.out.printf("ID: %d, Fecha: %s, Importe: %.2f€%n",
                 pedido.getId(),
                 pedido.getFecha().format(dateFormatter),

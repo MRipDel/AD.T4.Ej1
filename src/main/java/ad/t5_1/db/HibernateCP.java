@@ -36,6 +36,22 @@ public class HibernateCP {
     }
 
     /**
+     * Constructor privado con posibilidad de especificar archivo de configuración.
+     * 
+     * @param configFile Ruta al archivo de configuración
+     */
+    private HibernateCP(String configFile) {
+        try {
+            this.sessionFactory = new Configuration()
+                .configure(configFile)
+                .buildSessionFactory();
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error initializing Hibernate SessionFactory", e);
+            throw new RuntimeException("Could not initialize Hibernate SessionFactory", e);
+        }
+    }
+
+    /**
      * Obtiene la instancia única del gestor de sesiones.
      * 
      * @return Instancia de HibernateCP
@@ -45,6 +61,23 @@ public class HibernateCP {
             synchronized (HibernateCP.class) {
                 if (instance == null) {
                     instance = new HibernateCP();
+                }
+            }
+        }
+        return instance;
+    }
+
+    /**
+     * Obtiene la instancia única del gestor especificando un archivo de configuración.
+     * 
+     * @param configFile Ruta al archivo de configuración
+     * @return Instancia de HibernateCP
+     */
+    public static synchronized HibernateCP getInstance(String configFile) {
+        if (instance == null) {
+            synchronized (HibernateCP.class) {
+                if (instance == null) {
+                    instance = new HibernateCP(configFile);
                 }
             }
         }

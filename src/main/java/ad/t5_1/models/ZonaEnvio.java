@@ -1,6 +1,7 @@
 package ad.t5_1.models;
 
 import jakarta.persistence.*;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -14,22 +15,25 @@ public class ZonaEnvio {
     @Column(name = "nombre_zona", nullable = false, length = 100)
     private String nombre;
     
-    @Column(name = "tarifa_envio", nullable = false, precision = 10, scale = 2)
+    @Column(name = "tarifa_envio", nullable = false)
     private double tarifa;
     
     @OneToMany(mappedBy = "zona", cascade = CascadeType.ALL)
-    private List<Cliente> clientes;
+    private List<Cliente> clientes = new ArrayList<>();
 
+    // Constructor sin parámetros
     public ZonaEnvio() {
         super();
     }
 
+    // Constructor completo
     public ZonaEnvio(int id, String nombre, double tarifa) {
         this.id = id;
         this.nombre = nombre;
         this.tarifa = tarifa;
     }
 
+    // Getters y setters
     public int getId() {
         return id;
     }
@@ -60,5 +64,16 @@ public class ZonaEnvio {
     
     public void setClientes(List<Cliente> clientes) {
         this.clientes = clientes;
+    }
+    
+    // Métodos de ayuda para gestionar la relación bidireccional
+    public void addCliente(Cliente cliente) {
+        clientes.add(cliente);
+        cliente.setZona(this);
+    }
+    
+    public void removeCliente(Cliente cliente) {
+        clientes.remove(cliente);
+        cliente.setZona(null);
     }
 }

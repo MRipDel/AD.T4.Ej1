@@ -5,11 +5,11 @@
             "type": "java",
             "name": "Launch Program",
             "request": "launch",
-            "mainClass": "ad.t4_1.Main",
-            "projectName": "t4.ej1",
+            "mainClass": "ad.t5_1.Main",
+            "projectName": "t5.ej1",
             "args": [
                 "--db", "pedidos.db",
-                "--init-script", "pedidos.sql",
+                "--hibernate-config", "hibernate.cfg.xml",
                 "--ui", "console"
             ]
         }
