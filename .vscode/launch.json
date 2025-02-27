@@ -6,7 +6,7 @@
             "name": "Launch Program",
             "request": "launch",
             "mainClass": "ad.t5_1.Main",
-            "projectName": "t4.ej1",
+            "projectName": "t5.ej1",
             "args": [
                 "--db", "pedidos.db",
                 "--init-script", "pedidos.sql",
